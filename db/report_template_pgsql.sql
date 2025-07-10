@@ -1,0 +1,24 @@
+/* DO NOT CHANGE THE FOLLOWING LINES */
+SELECT
+    ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS id,
+/* MODIFY THE FOLLOWING LINES TO CHOOSE THE PERIODS FOR THIS REPORT */
+    CONCAT(
+        EXTRACT(YEAR FROM TIMESTAMP 'epoch' + timecreated * INTERVAL '1 second'),
+        '-',
+        LPAD(EXTRACT(WEEK FROM TIMESTAMP 'epoch' + timecreated * INTERVAL '1 second')::TEXT, 2, '0')
+    ) AS periodid,
+/* MODIFY THE FOLLOWING LINES TO CHOOSE THE SUBIDS AND VALUES FOR THIS REPORT OR PROVIDE `'' AS subid` */
+    '' AS subid,
+    COUNT(id) AS periodvalue,
+/* DO NOT CHANGE THE FOLLOWING LINES */
+    MAX(timecreated) AS lasttimecreated
+FROM {local_stats}
+WHERE
+    timecreated > ?
+/* MODIFY THE FOLLOWING LINE TO MATCH YOUR PERIOD DURATION */
+    AND timecreated < EXTRACT(EPOCH FROM (DATE_TRUNC('week', CURRENT_DATE)))
+/* MODIFY THE FOLLOWING LINE TO SELECT THE LOG ITEMS RELEVANT TO YOUR REPORT */
+    AND path LIKE '/admin/settings.php'
+/* DO NOT CHANGE THE FOLLOWING LINES */
+GROUP by periodid,subid
+ORDER by periodid

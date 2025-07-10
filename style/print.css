@@ -1,0 +1,26 @@
+@media print {
+  @page {
+    size: landscape;
+  }
+  .chart-image,
+  .chart-table,
+  .pagebreak {
+    page-break-after: always;
+  }
+  div.charttype:not(.charttype.pie,.charttype.pie_doughnut) canvas {
+    width: 100% !important;
+    max-height: 500px;
+    min-height: 500px;
+  }
+  div.charttype.pie canvas,
+  div.charttype.pie_doughnut canvas {
+    height: 800px !important;
+    width: 1170px !important;
+  }
+}
+div.charttype:not(.charttype.pie,.charttype.pie_doughnut) .chart-image,
+div.charttype:not(.charttype.pie,.charttype.pie_doughnut) canvas {
+  width: 100% !important;
+  max-height: 500px;
+  min-height: 500px;
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<libraries>
+    <library>
+        <location>vendor/dragonmantank</location>
+        <name>dragonmantank/cron-expression</name>
+        <version>3.3.3</version>
+        <license>MIT Licence</license>
+        <licenseversion></licenseversion>
+    </library>
+</libraries>
