@@ -104,7 +104,7 @@ class lib {
         }
 
         foreach ($entries as $entry) {
-            $icon = !empty($entry->icon) ? "<i class=\"fa {$entry->icon}\"></i>&nbsp;" : '';
+            $icon = !empty($entry->icon) ? "<i class=\"fa {$entry->icon}\"></i>&nbsp;&nbsp;" : '';
             $nav->add($icon . $entry->label, $entry->link);
         }
     }
@@ -134,6 +134,9 @@ class lib {
             'lang' => current_language(),
             'path' => substr($url->get_path(), 0, 1333),
             'params' => substr($url->get_query_string(false), 0, 1333),
+            'referer' => !empty($_SERVER['HTTP_REFERER']) ? substr($_SERVER['HTTP_REFERER'], 0, 1333) : '',
+            'remoteaddr' => $_SERVER['REMOTE_ADDR'] ?? '',
+            'useragent' => !empty($_SERVER['HTTP_USER_AGENT']) ? substr($_SERVER['HTTP_USER_AGENT'], 0, 1333) : '',
             'timecreated' => time(),
         ];
         $DB->insert_record('local_stats', $record);

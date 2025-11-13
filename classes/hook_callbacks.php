@@ -28,14 +28,27 @@ use core\hook\after_config;
 class hook_callbacks {
     public static function after_config(after_config $hook): void {
         global $CFG;
+
         if (during_initial_install()) {
             // Do nothing during installation
             return;
         }
+
         $CFG->chart_colorset = array_map('trim', explode("\n", get_config('local_stats', 'template_color_codes')));
     }
     public static function before_standard_head_html_generation($hook): void {
-        global $PAGE, $USER;
+        global $DB, $PAGE, $USER;
+
+        if (during_initial_install()) {
+            // Do nothing during installation
+            return;
+        }
+
+        if (!$DB->get_manager()->table_exists('local_stats')) {
+            // During initial install of the plugin, the table does not exist yet.
+            return;
+        }
+
         if (!empty($USER->id) && is_object($PAGE->url)) {
             \local_stats\lib::log_record($PAGE->url, $PAGE->context->id);
         }

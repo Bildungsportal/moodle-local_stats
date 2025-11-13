@@ -318,7 +318,7 @@ class reportinglib {
                 $message->fullmessagehtml = "<h1>{$reporting->name}</h1><p>{$reporting->description}</p>";
                 $message->fullmessage = \html_to_text($message->fullmessagehtml);
                 $message->fullmessageformat = FORMAT_HTML;
-                $message->smallmessage = $message->fullmessage;
+                $message->smallmessage = mb_substr($message->fullmessage, 0, 2000, 'UTF-8') . (mb_strlen($message->fullmessage, 'UTF-8') > 2000 ? '...' : '');
                 $message->notification = 1;
                 $message->contexturl = $PAGE->url->out(false);
                 $message->contexturlname = get_string('reporting', 'local_stats');

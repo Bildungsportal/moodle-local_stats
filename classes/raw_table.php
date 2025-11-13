@@ -37,8 +37,12 @@ class raw_table extends \local_table_sql\table_sql {
             'params' => 'params',
             'extraparams' => 'extraparams',
             'extrasession' => 'extrasession',
+            'referer' => 'referer',
+            'remoteaddr' => 'remoteaddr',
+            'useragent' => 'useragent',
             'timecreated' => 'timecreated',
         ]);
         $this->sortable(true, 'timecreated', SORT_DESC);
+        $this->set_hidden_columns(['referer', 'remoteaddr', 'useragent']);
     }
 }

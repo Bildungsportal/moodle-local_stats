@@ -145,6 +145,22 @@ function xmldb_local_stats_upgrade($oldversion) {
         }
         upgrade_plugin_savepoint(true, 2024083000, 'local', 'stats');
     }
+    if ($oldversion < 2025091900) {
+        $table = new xmldb_table('local_stats');
+        $field = new xmldb_field('referer', XMLDB_TYPE_CHAR, '1333', null, null, null, null, 'timecreated');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $field = new xmldb_field('remoteaddr', XMLDB_TYPE_CHAR, '15', null, null, null, null, 'referer');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $field = new xmldb_field('useragent', XMLDB_TYPE_CHAR, '1333', null, null, null, null, 'remoteaddr');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2025091900, 'local', 'stats');
+    }
 
     // \local_stats\lib::npm_install();
 
