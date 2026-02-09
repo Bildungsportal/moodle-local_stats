@@ -161,6 +161,18 @@ function xmldb_local_stats_upgrade($oldversion) {
         }
         upgrade_plugin_savepoint(true, 2025091900, 'local', 'stats');
     }
+    if ($oldversion < 2026012300) {
+        $table = new xmldb_table('local_stats');
+        $field = new xmldb_field('postparams', XMLDB_TYPE_CHAR, '1333', null, null, null, null, 'params');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $field = new xmldb_field('method', XMLDB_TYPE_CHAR, '10', null, null, null, null, 'lang');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_plugin_savepoint(true, 2026012300, 'local', 'stats');
+    }
 
     // \local_stats\lib::npm_install();
 

@@ -28,7 +28,7 @@ require_admin();
 $context = \context_system::instance();
 $PAGE->set_context($context);
 $PAGE->set_pagelayout('admin');
-$PAGE->set_url('/local/stats/report_raw.php');
+$PAGE->set_url('/local/stats/raw.php');
 
 $heading = get_string('pluginname', 'local_stats');
 $PAGE->set_title($heading);

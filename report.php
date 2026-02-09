@@ -50,10 +50,10 @@ if ($mform->is_cancelled()) {
             $data->lasttimecreated = 0;
             $msgs[] = get_string('report:reset_data', 'local_stats', ['name' => $data->name]);
         }
-        \local_stats\reportlib::set($data);
-    } else {
-        \local_stats\reportlib::set($data);
     }
+
+    \local_stats\reportlib::set($data);
+
     $msgs[] = get_string('report:saved', 'local_stats', ['name' => $data->name]);
     $msg = implode("<br />\n", $msgs);
     $url = $PAGE->url;

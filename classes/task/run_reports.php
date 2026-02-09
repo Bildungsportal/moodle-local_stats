@@ -33,8 +33,19 @@ class run_reports extends \core\task\scheduled_task {
     public function execute() {
         global $DB;
         $reportids = array_keys($DB->get_records_select('local_stats_report', 'enabled = 1 AND nextrun < ?', [time()], 'id'));
+        $errors = [];
         foreach ($reportids as $reportid) {
-            \local_stats\reportlib::run($reportid);
+            try {
+                \local_stats\reportlib::run($reportid);
+            } catch (\moodle_exception $e) {
+                $report = $DB->get_record('local_stats_report', ['id' => $reportid]);
+                $error = "{$report->name} (ID {$reportid}): " . $e->getMessage();
+                \mtrace($error);
+                $errors[] = $error;
+            }
+        }
+        if ($errors) {
+            throw new \moodle_exception('errorwhilerunningreports', 'local_stats', '', "\n" . implode("\n", $errors));
         }
     }
 }

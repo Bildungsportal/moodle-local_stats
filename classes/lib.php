@@ -28,6 +28,61 @@ use core_block\navigation\views\secondary;
 defined('MOODLE_INTERNAL') || die;
 
 class lib {
+    private static bool $log_postparams = false;
+    private static array $other_params = [];
+    private static array $request_extraparams = [];
+
+    public static function log_postparams(): void {
+        self::$log_postparams = true;
+    }
+
+    public static function add_extraparam(string $cachetype, string $name, string $value): void {
+        global $SESSION;
+
+        if ($cachetype === 'request') {
+            self::$request_extraparams[$name] = $value;
+        } elseif ($cachetype === 'session') {
+            if (!isset($SESSION->local_stats_extraparams)) {
+                $SESSION->local_stats_extraparams = [];
+            }
+            $SESSION->local_stats_extraparams[$name] = $value;
+        } else {
+            throw new \moodle_exception('Invalid cache type ' . $cachetype);
+        }
+    }
+
+    public static function remove_extraparam(string $cachetype, string $name): void {
+        global $SESSION;
+
+        if ($cachetype === 'request') {
+            unset(self::$request_extraparams[$name]);
+        } elseif ($cachetype === 'session') {
+            unset($SESSION->local_stats_extraparams[$name]);
+        } else {
+            throw new \moodle_exception('Invalid cache type ' . $cachetype);
+        }
+    }
+
+    private static function get_extraparams(string $cachetype): array {
+        global $SESSION;
+
+        if ($cachetype === 'request') {
+            return self::$request_extraparams;
+        } elseif ($cachetype === 'session') {
+            return $SESSION->local_stats_extraparams ?? [];
+        } else {
+            throw new \moodle_exception('Invalid cache type ' . $cachetype);
+        }
+    }
+
+
+    /**
+     * Provides possibility to add additional request parameters as they were GET-parameters.
+     */
+    public static function add_other_param(string $name, string $value): void {
+        self::$other_params[$name] = $value;
+    }
+
     public static function add_nav($reportingorid = 0, $reportorid = 0) {
         global $PAGE;
         $report = is_int($reportorid) && $reportorid > 0 ? reportlib::get($reportorid) : $reportorid;
@@ -111,39 +166,80 @@ class lib {
 
     /**
      * Add an entry to the local_stats-logging.
-     * @param \moodle_url $url
+     * @param \moodle_url|null $url
      * @param int $contextid
-     * @param int $userid, defaults to $USER->id
+     * @param int $userid , defaults to $USER->id
+     * @param bool $with_postparams
      * @return void
      * @throws \dml_exception
      * @throws \moodle_exception
      */
-    public static function log_record(\moodle_url $url, int $contextid = 0, int $userid = 0) {
+    public static function log_record(?\moodle_url $url = null, int $contextid = 0, int $userid = 0, bool $with_postparams = false): void {
         global $DB, $USER;
-        if (empty($userid)) {
+
+        if (!$userid) {
             $userid = $USER->id;
         }
-        // Exit if page was not setup correctly.
-        if (!is_object($url))
-            return;
+
+        if ($url) {
+            $path = $url->get_path();
+            $params = $url->get_query_string(false);
+        } else {
+            $path = strtok($_SERVER['REQUEST_URI'] ?? '', '?');
+            $params = $_SERVER['QUERY_STRING'] ?? '';
+        }
+
+        // TODO for later: remove Moodle base path if in subdirectory.
+        // For now keep the whole path
+        /*
+        $basepath = rtrim(parse_url($CFG->wwwroot, PHP_URL_PATH) ?: '', '/');
+        if ($basepath && str_starts_with($path, $basepath)) {
+            $path = substr($path, strlen($basepath));
+        }
+        */
+
+        $path = substr($path, 0, 1333);
+
+        if (static::$other_params) {
+            $otherparams = http_build_query(static::$other_params, '', '&');
+            if ($params) {
+                $params .= '&';
+            }
+            $params .= $otherparams;
+        }
+
+        $params = strlen($params) > 1333 ? substr($params, 0, 1330) . '...' : $params;
+
+        $postparams = null;
+        if ((self::$log_postparams || $with_postparams) && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+            // Truncate values longer than 255 chars in raw POST.
+            $parts = explode('&', file_get_contents('php://input'));
+            foreach ($parts as &$part) {
+                $pos = strpos($part, '=');
+                if ($pos !== false && strlen($part) - $pos - 1 > 255) {
+                    $part = substr($part, 0, $pos + 253) . '...';
+                }
+            }
+            $postparams = implode('&', $parts);
+            $postparams = strlen($postparams) > 1333 ? substr($postparams, 0, 1330) . '...' : $postparams;
+        }
+
         $record = (object)[
             'userid' => $userid,
             'contextid' => $contextid,
-            'extraparams' => \local_stats\api::get_extraparams('request'),
-            'extrasession' => \local_stats\api::get_extraparams('session'),
+            'extraparams' => http_build_query(self::get_extraparams('request'), '', '&'),
+            'extrasession' => http_build_query(self::get_extraparams('session'), '', '&'),
             'lang' => current_language(),
-            'path' => substr($url->get_path(), 0, 1333),
-            'params' => substr($url->get_query_string(false), 0, 1333),
+            'method' => $_SERVER['REQUEST_METHOD'] ?? '',
+            'path' => $path,
+            'params' => $params,
+            'postparams' => $postparams,
             'referer' => !empty($_SERVER['HTTP_REFERER']) ? substr($_SERVER['HTTP_REFERER'], 0, 1333) : '',
             'remoteaddr' => $_SERVER['REMOTE_ADDR'] ?? '',
             'useragent' => !empty($_SERVER['HTTP_USER_AGENT']) ? substr($_SERVER['HTTP_USER_AGENT'], 0, 1333) : '',
             'timecreated' => time(),
         ];
+
         $DB->insert_record('local_stats', $record);
     }
-
-    // keine Rechte am Server um npm install auszuführen
-    // public static function npm_install() {
-    //     passthru('cd ' . __DIR__ . '/../chart-app && npm install --omit=dev 2>&1');
-    // }
 }

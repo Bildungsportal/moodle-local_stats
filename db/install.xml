@@ -12,8 +12,10 @@
         <FIELD NAME="extraparams" TYPE="char" LENGTH="1333" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="extrasession" TYPE="char" LENGTH="1333" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="lang" TYPE="char" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="method" TYPE="char" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="HTTP request method (GET, POST, etc.)"/>
         <FIELD NAME="path" TYPE="char" LENGTH="1333" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="params" TYPE="char" LENGTH="1333" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="postparams" TYPE="char" LENGTH="1333" NOTNULL="false" SEQUENCE="false" COMMENT="POST parameters"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="referer" TYPE="char" LENGTH="1333" NOTNULL="false" SEQUENCE="false" COMMENT="the http referer"/>
         <FIELD NAME="remoteaddr" TYPE="char" LENGTH="15" NOTNULL="false" SEQUENCE="false" COMMENT="the remote address / ip address"/>

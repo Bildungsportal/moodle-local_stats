@@ -23,6 +23,7 @@
 
 $string['cachedef_extraparams_request'] = 'Extra-Params to be added in regard of the request';
 $string['cachedef_extraparams_session'] = 'Extra-Params to be added in regard of the session';
+$string['cron'] = 'Cron';
 $string['data'] = 'Data';
 $string['keep_data'] = 'Keep data';
 $string['keep_data:description'] = 'Specify how long the log data shall be kept.';
@@ -73,8 +74,11 @@ $string['report:lasttimecreated'] = 'Last timestamp';
 $string['report:lasttimecreated_help'] = 'The timestamp of the last item that has been analyzed in this report. Normally, you do not need to change this value!';
 $string['report:query'] = 'Query';
 $string['report:query_help'] = 'Define the sql query here. It must provide the following columns: period, subid,value und lasttimecreated.';
-$string['report:query:contains_malicious_sql'] = 'The query contains malicious sql commands! Commands such as UPDATE, INSERT and such must not be used!';
+$string['report:query:contains_malicious_sql'] = 'The query contains a prohibited keyword: {$a}';
+$string['report:query:empty'] = 'No SQL query defined';
+$string['report:query:invalid'] = 'Invalid SQL query';
 $string['report:query:template'] = 'SQL Template for reports';
+$string['errorwhilerunningreports'] = 'Errors while running reports: {$a}';
 $string['report:reset_data'] = 'All prior data to the report "{$a->name}" has been erased and will be recalculated.';
 $string['report:run:successfully'] = 'The report "{$a->name}" has been run successfully!';
 $string['report:saved'] = 'The report "{$a->name}" was stored successfully.';

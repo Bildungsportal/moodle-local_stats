@@ -21,6 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+$string['cron'] = 'Cron';
 $string['data'] = 'Datentabelle';
 $string['keep_data'] = 'Daten behalten';
 $string['keep_data:description'] = 'Bitte geben Sie an, wie lange Logdaten behalten werden sollen.';
@@ -59,13 +60,16 @@ $string['report:switch_axes_graph_help'] = 'Tausche Zeilen und Spalten beim Diag
 $string['report:wipedata'] = 'Daten immer löschen';
 $string['report:wipedata:text'] = 'Ja, alle Daten vor jedem Durchlauf des Berichts löschen!';
 $string['report:wipedataonce'] = 'Daten einmalig löschen';
-$string['report:wipedataonce:text'] = 'Ja, bitte alle Daten einmalig löschen!';
+$string['report:wipedataonce:text'] = 'Ja, alle Daten einmalig löschen!';
 $string['report:lasttimecreated'] = 'Letzter Zeitstempel';
 $string['report:lasttimecreated_help'] = 'Der Zeitstempel des letzten analysierten Eintrags. Normalerweise muss dieser Wert nicht händisch verändert werden!';
 $string['report:query'] = 'Abfrage';
 $string['report:query_help'] = 'Definieren Sie die SQL-Abfrage. Diese muss als Rückgabewerte folgende Spalten beinhalten: period, subid,value und lasttimecreated.';
-$string['report:query:contains_malicious_sql'] = 'Die SQL Abfrage enthält gefährliche Befehle! Befehle wie UPDATE, INSERT usw. dürfen nicht genutzt werden!';
+$string['report:query:contains_malicious_sql'] = 'Die SQL-Abfrage enthält ein verbotenes Schlüsselwort: {$a}';
+$string['report:query:empty'] = 'Keine SQL-Abfrage definiert';
+$string['report:query:invalid'] = 'Ungültige SQL-Abfrage';
 $string['report:query:template'] = 'SQL Vorlage für Berichte';
+$string['errorwhilerunningreports'] = 'Fehler bei der Ausführung von Berichten: {$a}';
 $string['report:reset_data'] = 'Alle bisherigen Daten zum Bericht "{$a->name}" wurden gelöscht und werden bald neu berechnet.';
 $string['report:run:successfully'] = 'Der Bericht "{$a->name}" wurde erfolgreich ausgeführt!';
 $string['report:saved'] = 'Der Bericht "{$a->name}" wurde erfolgreich gespeichert.';

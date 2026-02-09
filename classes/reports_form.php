@@ -129,15 +129,6 @@ class reports_form extends moodleform {
         $mform->setType('lasttimecreated', PARAM_INT);
 
         $mform->addElement(
-            'advcheckbox', 'confirmsqlchange',
-            get_string('report:confirmsqlchange', 'local_stats'),
-            get_string('report:confirmsqlchange:text', 'local_stats'),
-            [], [0, 1]
-        );
-        $mform->hideIf('confirmsqlchange', 'id', 'eq', 0);
-        $mform->setType('confirmsqlchange', PARAM_TEXT);
-
-        $mform->addElement(
             'advcheckbox', '__payload_wipedata',
             get_string('report:wipedata', 'local_stats'),
             get_string('report:wipedata:text', 'local_stats'),
@@ -154,13 +145,14 @@ class reports_form extends moodleform {
         $mform->hideIf('wipedataonce', 'id', 'eq', 0);
         $mform->setType('wipedataonce', PARAM_TEXT);
 
-        $mform->addElement('textarea', '__payload_query', get_string('report:query', 'local_stats'), 'wrap="virtual" rows="20" cols="50"');
-        $mform->setType('__payload_query', PARAM_RAW);
-        $mform->addHelpButton('__payload_query', 'report:query', 'local_stats');
+        $mform->addElement('textarea', 'disabled_query', get_string('report:query', 'local_stats'), 'wrap="virtual" rows="20" cols="50" disabled="disabled"');
+        $mform->addHelpButton('disabled_query', 'report:query', 'local_stats');
 
         $this->add_action_buttons();
     }
 
+    // no validation needed anymore
+    /*
     function validation($data, $files): array {
         $errors = [];
         if (!empty($data['id'])) {
@@ -174,13 +166,14 @@ class reports_form extends moodleform {
         }
         return $errors;
     }
+    */
 
     function get_data() {
         $data = parent::get_data();
         if ($data) {
             if ($data->id) {
                 // Ensure data of payload that is not part of the form is kept!
-                $originaldata = reportlib::get($data->id);
+                $originaldata = reportlib::get($data->id, false);
                 $data->payload = $originaldata->payload;
             } else {
                 $data->payload = (object)[
@@ -194,6 +187,7 @@ class reports_form extends moodleform {
                 }
             }
         }
+
         return $data;
     }
 
@@ -207,6 +201,9 @@ class reports_form extends moodleform {
             } else {
                 $data->nextrun_readable = !empty($data->nextrun) ? date('Y-m-d H:i', $data->nextrun) : get_string('now');
             }
+
+            // query preview setzen, falls vorhanden
+            $data->disabled_query = $data->payload->query ?? '';
         }
         parent::set_data($data);
     }

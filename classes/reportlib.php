@@ -24,7 +24,6 @@
 namespace local_stats;
 
 use core\chart_base;
-use core_block\navigation\views\secondary;
 
 defined('MOODLE_INTERNAL') || die;
 
@@ -74,7 +73,7 @@ class reportlib {
 
     public static function get_chart_filled(object $report) {
         global $CFG;
-        $data = static::get_data_for_purpose($report,'graph');
+        $data = static::get_data_for_purpose($report, 'graph');
         $chart = static::get_chart($report, $report->payload->charttype);
         $CFG->chart_colorset = array_map('trim', explode("\n", get_config('local_stats', 'template_color_codes')));
         $chart->set_legend_options(['position' => 'bottom']);
@@ -101,8 +100,8 @@ class reportlib {
         return $chart;
     }
 
-    public static function get(int $id) {
-        global $DB;
+    public static function get(int $id, bool $with_config_overrides = true): object {
+        global $CFG, $DB;
         if (!empty($id)) {
             $report = $DB->get_record('local_stats_report', ['id' => $id], '*', MUST_EXIST);
         } else {
@@ -114,7 +113,26 @@ class reportlib {
                 'lasttimecreated' => 0,
             ];
         }
+
         static::upgrade($report);
+
+        // allow overriding the report settings from config.php
+        if ($with_config_overrides && isset($CFG->local_stats_reports[$report->id])) {
+            $report_config = $CFG->local_stats_reports[$report->id];
+
+            // if entry is just a string, then it is the query
+            if (is_string($report_config)) {
+                $report_config = ['query' => $report_config];
+            }
+
+            // else override all settings
+            if (is_array($report_config) || is_object($report_config)) {
+                foreach ($report_config as $key => $value) {
+                       $report->payload->$key = $value;
+                }
+            }
+        }
+
         return $report;
     }
 
@@ -125,7 +143,7 @@ class reportlib {
      */
     public static function get_data(object $report): object {
         global $DB;
-        $data = (object) [
+        $data = (object)[
             'periodids' => [],
             'series' => [],
             'subids' => [],
@@ -135,7 +153,7 @@ class reportlib {
         while ($report->payload->amount_keep > 0 && count($data->periodids) > $report->payload->amount_keep) {
             // Shift the oldest period until amount fits adn delete obsolete data.
             $removeperiod = array_shift($data->periodids);
-            $DB->delete_records('local_stats_data', [ 'reportid' => $report->id, 'periodid' => $removeperiod ]);
+            $DB->delete_records('local_stats_data', ['reportid' => $report->id, 'periodid' => $removeperiod]);
         }
         while ($report->payload->amount_show > 0 && count($data->periodids) > $report->payload->amount_show) {
             // Just shift the oldest period until amount fits.
@@ -144,8 +162,8 @@ class reportlib {
 
         $data->subids = [];
 
-        [$insql, $inparams] = $DB->get_in_or_equal($data->periodids, onemptyitems: true);
-        $params = array_merge([ $report->id ], $inparams);
+        [$insql, $inparams] = $DB->get_in_or_equal($data->periodids, onemptyitems: -1);
+        $params = array_merge([$report->id], $inparams);
         $sql = "
             SELECT DISTINCT(subid)
             FROM {local_stats_data}
@@ -193,7 +211,7 @@ class reportlib {
                 }
             }
         }
-        switch($report->payload->sort_by) {
+        switch ($report->payload->sort_by) {
             case 'name':
                 if ($report->payload->sort_type == 'ASC') {
                     ksort($data->series);
@@ -224,11 +242,13 @@ class reportlib {
         if (empty($data)) {
             $data = static::get_data($report);
         }
-        if (!in_array($purpose, [ 'data', 'graph' ])) return $data;
-        if (empty($report->payload->{"switch_axes_{$purpose}"})) return $data;
+        if (!in_array($purpose, ['data', 'graph']))
+            return $data;
+        if (empty($report->payload->{"switch_axes_{$purpose}"}))
+            return $data;
         // Switch axes -> subids become periodids, re-calcluate sum-serie
         // All variables with "_"-prefix follow the new ordering.
-        $_data = (object) [
+        $_data = (object)[
             'periodids' => [],
             'series' => [],
             'subids' => [],
@@ -242,7 +262,8 @@ class reportlib {
                 $_data->sumserie[$subid] = 0;
             }
             foreach ($data->series[$subid] as $periodid => $periodvalue) {
-                if (empty($_data->series[$periodid])) $_data->series[$periodid] = [];
+                if (empty($_data->series[$periodid]))
+                    $_data->series[$periodid] = [];
                 $_data->series[$periodid][$subid] = $periodvalue;
                 if (!empty($report->payload->sumgraph)) {
                     $_data->sumserie[$subid] = $_data->sumserie[$subid] + $periodvalue;
@@ -264,40 +285,47 @@ class reportlib {
     public static function run(int $reportid): object {
         global $DB;
         $report = static::get($reportid);
-        if (static::validate($report->payload->query)) {
-            if ($report->payload->wipedata) {
-                static::wipe($reportid);
-                $report->lasttimecreated = 0;
-            }
-            $results = $DB->get_records_sql($report->payload->query, [$report->lasttimecreated]);
-            $lasttimecreated = $report->lasttimecreated;
-            foreach ($results as $result) {
-                if (empty($result->periodid)) {
-                    \mtrace("Adding result to {$report->name} ({$report->id}) denied due to missing periodid");
+
+        if (empty($report->payload->query)) {
+            throw new \moodle_exception('report_query_is_empty');
+        }
+
+        if ($match = static::validate($report->payload->query)) {
+            throw new \moodle_exception('report:query:contains_malicious_sql', 'local_stats', '', $match);
+        }
+
+        if ($report->payload->wipedata) {
+            static::wipe($reportid);
+            $report->lasttimecreated = 0;
+        }
+        $results = $DB->get_recordset_sql($report->payload->query, [$report->lasttimecreated]);
+        $lasttimecreated = $report->lasttimecreated;
+        foreach ($results as $result) {
+            if (empty($result->periodid)) {
+                \mtrace("Adding result to {$report->name} ({$report->id}) denied due to missing periodid");
+            } else {
+                $result->reportid = $report->id;
+                $cntparams = ['reportid' => $report->id, 'periodid' => $result->periodid, 'subid' => $result->subid];
+                if ($DB->count_records('local_stats_data', $cntparams) > 0) {
+                    $DB->set_field('local_stats_data', 'periodvalue', $result->periodvalue, $cntparams);
                 } else {
-                    $result->reportid = $report->id;
-                    $cntparams = ['reportid' => $report->id, 'periodid' => $result->periodid, 'subid' => $result->subid];
-                    if ($DB->count_records('local_stats_data', $cntparams) > 0) {
-                        $DB->set_field('local_stats_data', 'periodvalue', $result->periodvalue, $cntparams);
-                    } else {
-                        $DB->insert_record('local_stats_data', $result);
-                    }
-                    if ($lasttimecreated < $result->lasttimecreated) {
-                        $lasttimecreated = $result->lasttimecreated;
-                    }
+                    $DB->insert_record('local_stats_data', $result);
+                }
+                if ($lasttimecreated < $result->lasttimecreated) {
+                    $lasttimecreated = $result->lasttimecreated;
                 }
             }
-            $report->lasttimecreated = $lasttimecreated;
-            if (empty($report->payload->cron_enabled)) {
-                $report->nextrun = 0;
-            } else {
-                $report->nextrun = \local_stats\cronlib::get_next_run_time($report->payload->cronexpression);
-            }
-            $report->payload = json_encode($report->payload, JSON_PRETTY_PRINT);
-            $DB->update_record('local_stats_report', $report);
-        } else {
-            \mtrace("Execution of {$report->name} ({$report->id}) denied due to malicious sql query");
         }
+        $results->close();
+        $report->lasttimecreated = $lasttimecreated;
+        if (empty($report->payload->cron_enabled)) {
+            $report->nextrun = 0;
+        } else {
+            $report->nextrun = \local_stats\cronlib::get_next_run_time($report->payload->cronexpression);
+        }
+        $report->payload = json_encode($report->payload, JSON_PRETTY_PRINT);
+        $DB->update_record('local_stats_report', $report);
+
         return $report;
     }
 
@@ -308,9 +336,11 @@ class reportlib {
                 $report->payload->cron_minute, $report->payload->cron_hour, $report->payload->cron_day,
                 $report->payload->cron_month, $report->payload->cron_dayofweek,
             ]);
-            if (empty($report->payload->cron_enabled))
+            if (empty($report->payload->cron_enabled)) {
                 $report->nextrun = 0;
-            else $report->nextrun = \local_stats\cronlib::get_next_run_time($report->payload->cronexpression);
+            } else {
+                $report->nextrun = \local_stats\cronlib::get_next_run_time($report->payload->cronexpression);
+            }
             $report->payload = json_encode($report->payload, JSON_PRETTY_PRINT);
         }
         if (!empty($report->id)) {
@@ -328,12 +358,14 @@ class reportlib {
             $report->payload = (object)[
                 'version' => static::REPORT_VERSION,
                 'cron_enabled' => 0,
-                'cron_minute' => '*',
+                'cron_minute' => '0',
                 'cron_hour' => '12',
                 'cron_day' => '*',
                 'cron_month' => '*',
                 'cron_dayofweek' => '*',
-                'query' => get_config('local_stats', 'template_sql_query'),
+                // don't load query from config anymore, config could contain malicious sql
+                // 'query' => get_config('local_stats', 'template_sql_query'),
+                'query' => '',
                 'type' => 'line',
             ];
         }
@@ -348,11 +380,11 @@ class reportlib {
         }
         if ($report->payload->version < 2024041600) {
             $report->payload->cron_enabled = 0;
-            $report->payload->cron_minute = '*';
+            $report->payload->cron_minute = '0';
             $report->payload->cron_hour = '12';
             $report->payload->cron_day = '*';
             $report->payload->cron_month = '*';
-            $report->payload->cron_dayoftweek = '*';
+            $report->payload->cron_dayofweek = '*';
             $changed = true;
         }
         if ($report->payload->version < 2024051300) {
@@ -387,17 +419,33 @@ class reportlib {
     /**
      * Validate that certain keywords are not used within the query.
      * @param string $query
-     * @return bool
+     * @return string Empty string if valid, otherwise the matched keyword.
      */
-    public static function validate(string $query): bool {
-        $prohibited = ['UPDATE', 'INSERT', 'DELETE', 'TRUNCATE'];
-        $query = str_replace(' ', '', $query);
-        foreach ($prohibited as $keyword) {
-            if (strpos($query, $keyword) !== false) {
-                return false;
+    public static function validate(string $query): string {
+        $prohibited = [
+            '\bUPDATE\b',
+            '\bINSERT\b',
+            '\bDELETE\b',
+            '\bTRUNCATE\b',
+            '\bDROP\b',
+            '\bALTER\b',
+            '\bCREATE\b',
+            '\bREPLACE\s+INTO\b',
+            '\bRENAME\b',
+            '\bGRANT\b',
+            '\bREVOKE\b',
+            '\bEXECUTE\b',
+            '\bLOCK\b',
+            '\bUNLOCK\b',
+        ];
+        $query = strtoupper($query);
+
+        foreach ($prohibited as $pattern) {
+            if (preg_match('!' . $pattern . '!', $query, $matches)) {
+                return $matches[0];
             }
         }
-        return true;
+        return '';
     }
 
     /**
