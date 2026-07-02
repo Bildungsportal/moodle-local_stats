@@ -100,6 +100,11 @@ class reportlib {
         return $chart;
     }
 
+    public static function get_sql_file(int $reportid): string {
+        global $CFG;
+        return "{$CFG->dataroot}/local_stats_reports/{$reportid}.sql";
+    }
+
     public static function get(int $id, bool $with_config_overrides = true): object {
         global $CFG, $DB;
         if (!empty($id)) {
@@ -116,20 +121,45 @@ class reportlib {
 
         static::upgrade($report);
 
-        // allow overriding the report settings from config.php
-        if ($with_config_overrides && isset($CFG->local_stats_reports[$report->id])) {
-            $report_config = $CFG->local_stats_reports[$report->id];
+        // Load the SQL query from outside the DB if possible. Two sources are allowed:
+        //   1. $CFG->local_stats_reports[$id] in config.php (wins; can also override other payload fields)
+        //   2. {dataroot}/local_stats_reports/{id}.sql (fallback)
+        // If neither source provides a query, the DB copy is kept as a legacy fallback.
+        // The transient payload->query_is_external flag tells consumers (run/set/UI)
+        // where the query came from. It is never persisted to the DB.
+        $report->payload->query_is_external = false;
+        if ($with_config_overrides && !empty($report->id)) {
+            $hadqueryindb = isset($report->payload->query);
 
-            // if entry is just a string, then it is the query
-            if (is_string($report_config)) {
-                $report_config = ['query' => $report_config];
+            $sqlfile = static::get_sql_file($report->id);
+            if (is_readable($sqlfile)) {
+                $report->payload->query = trim(file_get_contents($sqlfile));
+                $report->payload->query_is_external = true;
             }
 
-            // else override all settings
-            if (is_array($report_config) || is_object($report_config)) {
-                foreach ($report_config as $key => $value) {
-                       $report->payload->$key = $value;
+            if (isset($CFG->local_stats_reports[$report->id])) {
+                $report_config = $CFG->local_stats_reports[$report->id];
+                if (is_string($report_config)) {
+                    $report_config = ['query' => $report_config];
                 }
+                if (is_array($report_config) || is_object($report_config)) {
+                    foreach ($report_config as $key => $value) {
+                        $report->payload->$key = $value;
+                    }
+                    if ((is_array($report_config) && array_key_exists('query', $report_config))
+                        || (is_object($report_config) && property_exists($report_config, 'query'))) {
+                        $report->payload->query_is_external = true;
+                    }
+                }
+            }
+
+            // Only drop the DB copy once an external source actually provides the query.
+            if ($report->payload->query_is_external && $hadqueryindb) {
+                $clean = clone $report->payload;
+                unset($clean->query, $clean->query_is_external);
+                $DB->set_field('local_stats_report', 'payload',
+                    json_encode($clean, JSON_PRETTY_PRINT),
+                    ['id' => $report->id]);
             }
         }
 
@@ -323,6 +353,12 @@ class reportlib {
         } else {
             $report->nextrun = \local_stats\cronlib::get_next_run_time($report->payload->cronexpression);
         }
+        // If the SQL came from an external source, never write it back into the DB payload.
+        // Otherwise (legacy: query lives in DB) keep it so the report stays runnable.
+        if (!empty($report->payload->query_is_external)) {
+            unset($report->payload->query);
+        }
+        unset($report->payload->query_is_external);
         $report->payload = json_encode($report->payload, JSON_PRETTY_PRINT);
         $DB->update_record('local_stats_report', $report);
 
@@ -332,6 +368,11 @@ class reportlib {
     public static function set(object $report) {
         global $DB;
         if (!is_string($report->payload)) {
+            // Only strip the DB copy of the SQL if an external source provides it.
+            if (!empty($report->payload->query_is_external)) {
+                unset($report->payload->query);
+            }
+            unset($report->payload->query_is_external);
             $report->payload->cronexpression = implode(' ', [
                 $report->payload->cron_minute, $report->payload->cron_hour, $report->payload->cron_day,
                 $report->payload->cron_month, $report->payload->cron_dayofweek,
@@ -363,9 +404,6 @@ class reportlib {
                 'cron_day' => '*',
                 'cron_month' => '*',
                 'cron_dayofweek' => '*',
-                // don't load query from config anymore, config could contain malicious sql
-                // 'query' => get_config('local_stats', 'template_sql_query'),
-                'query' => '',
                 'type' => 'line',
             ];
         }

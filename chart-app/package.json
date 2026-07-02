@@ -4,20 +4,21 @@
   "description": "",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "ts-node src/index.ts",
-    "watch": "ncc build -w src/index.ts",
+    "dev": "npm run prebuild && ts-node src/index.ts",
+    "prebuild": "node scripts/generate-version.js",
+    "watch": "npm run prebuild && ncc build -w src/index.ts",
     "build": "ncc build src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "prowebat",
   "license": "ISC",
   "dependencies": {
-    "canvas": "^2.11.2"
+    "canvas": "^3.2.1"
   },
   "devDependencies": {
-    "chart.js": "^3.9.1",
-    "chartjs-node-canvas": "^4.1.6",
-    "ncc": "^0.3.6",
-    "typescript": "^5.4.5"
+    "@vercel/ncc": "^0.44.0",
+    "chart.js": "^4.5.1",
+    "chartjs-node-canvas": "^5.0.0",
+    "typescript": "^6.0.2"
   }
 }

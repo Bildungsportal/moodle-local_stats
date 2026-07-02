@@ -12,6 +12,18 @@ Website Administration / Plugins / Local Plugins / Reports. If a report is added
 the administrator must provide an sql query. The sql query must not contain certain sql commands, such as
 UPDATE, DELETE, TRUNCATE and so on.
 
+### Where SQL queries live
+
+The SQL query for each report is stored as a `.sql` file in moodledata, not in the database:
+
+```
+{dataroot}/local_stats_reports/{id}.sql
+```
+
+After creating a report in the UI you take note of its id and place the matching SQL file there.
+Sample queries are available in `local/stats/example_reports/`. The form shows the currently
+loaded query in a read-only textarea for inspection.
+
 The sql query must further provide an auto increment value, a periodid, a subid to the period, a period value and the
 latest timecreated-value within that period. For example could you make a report of whith pages in the site-administration
 have been used per weeknumber using the query

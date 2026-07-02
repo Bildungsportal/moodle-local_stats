@@ -151,23 +151,6 @@ class reports_form extends moodleform {
         $this->add_action_buttons();
     }
 
-    // no validation needed anymore
-    /*
-    function validation($data, $files): array {
-        $errors = [];
-        if (!empty($data['id'])) {
-            $originaldata = reportlib::get($data['id']);
-            if ($data['__payload_query'] != $originaldata->payload->query && empty($data['confirmsqlchange'])) {
-                $errors['__payload_query'] = get_string('report:confirmsqlchange:required', 'local_stats');
-            }
-        }
-        if (!reportlib::validate($data['__payload_query'])) {
-            $errors['__payload_query'] = get_string('report:query:contains_malicious_sql', 'local_stats');
-        }
-        return $errors;
-    }
-    */
-
     function get_data() {
         $data = parent::get_data();
         if ($data) {

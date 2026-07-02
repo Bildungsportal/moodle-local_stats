@@ -47,9 +47,19 @@ class reports_data_table extends \local_table_sql\table_sql {
         $selectables = ['periodid', 'subid'];
         foreach ($selectables as $selectable) {
             if ($this->{"selectable{$selectable}"}) {
-                $options = array_keys($DB->get_records_sql('SELECT DISTINCT(' . $selectable . ') FROM {local_stats_data} WHERE reportid = ?', [$this->reportid]));
-                for ($a = 0; $a < count($options); $a++) {
-                    $options[$a] = ['text' => $options[$a], 'value' => $options[$a]];
+                $ORDER = ($selectable == 'periodid') ? 'DESC' : 'ASC';
+                $selectoptions = array_keys(
+                    $DB->get_records_sql(
+                        'SELECT DISTINCT(' . $selectable . ')
+                         FROM {local_stats_data}
+                         WHERE reportid = ?
+                         ORDER BY ' . $selectable . ' ' . $ORDER,
+                        [$this->reportid]
+                    )
+                );
+                $options = [];
+                foreach ($selectoptions as $selectoption) {
+                    $options[$selectoption] = $selectoption;
                 }
                 $this->set_column_options($selectable,
                     sql_column: $selectable,

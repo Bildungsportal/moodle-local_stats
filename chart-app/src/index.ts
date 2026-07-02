@@ -1,6 +1,15 @@
 import {ChartCallback, ChartJSNodeCanvas} from 'chartjs-node-canvas';
 import {ChartConfiguration} from 'chart.js';
 import {promises as fs} from 'fs';
+import {VERSION} from './generated/version';
+
+if (process.argv.includes('--version') || process.argv.includes('-v')) {
+  console.log(`chart-app v${VERSION.app}`);
+  console.log(`  TypeScript: ${VERSION.typescript}`);
+  console.log(`  ncc: ${VERSION.ncc}`);
+  console.log(`  Built: ${VERSION.buildDate}`);
+  process.exit(0);
+}
 
 let inputData = '';
 
@@ -177,7 +186,7 @@ async function run(data): Promise<void> {
   try {
     const chartJSNodeCanvas = new ChartJSNodeCanvas({width, height, chartCallback});
     const buffer = await chartJSNodeCanvas.renderToBuffer(configuration);
-    await fs.writeFile(output_file, buffer, 'base64');
+    await fs.writeFile(output_file, new Uint8Array(buffer));
   } catch (e) {
     console.error(e);
     process.exit(1);
